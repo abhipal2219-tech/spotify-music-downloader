@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+backend/.env
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Downloads
+downloads/
+
+# Artifacts
+*.zip
