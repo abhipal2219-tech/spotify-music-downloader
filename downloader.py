@@ -19,15 +19,13 @@ except ImportError:
 
 # ── Lazy Spotify client (re-reads env vars on first call) ────────────
 _sp_client = None
-_sp_initialized = False
 
 
 def _get_spotify_client():
-    """Lazily initialize the Spotify client on first use."""
-    global _sp_client, _sp_initialized
-    if _sp_initialized:
+    """Initialize the Spotify client. Retries if not yet connected."""
+    global _sp_client
+    if _sp_client is not None:
         return _sp_client
-    _sp_initialized = True
 
     if not spotipy:
         print("[WARN] spotipy library not installed")
@@ -36,8 +34,10 @@ def _get_spotify_client():
     client_id = os.environ.get("SPOTIPY_CLIENT_ID", "").strip()
     client_secret = os.environ.get("SPOTIPY_CLIENT_SECRET", "").strip()
 
+    print(f"[DEBUG] Attempting Spotify auth. ID length={len(client_id)}, Secret length={len(client_secret)}")
+
     if not client_id or not client_secret:
-        print(f"[WARN] Spotify credentials missing. ID={'set' if client_id else 'EMPTY'}, Secret={'set' if client_secret else 'EMPTY'}")
+        print("[WARN] Spotify credentials are empty")
         return None
 
     try:
@@ -45,14 +45,14 @@ def _get_spotify_client():
             client_id=client_id,
             client_secret=client_secret,
         )
-        _sp_client = spotipy.Spotify(auth_manager=auth_manager)
+        client = spotipy.Spotify(auth_manager=auth_manager)
         # Quick test to verify credentials work
-        _sp_client.search(q="test", limit=1)
+        client.search(q="test", limit=1)
+        _sp_client = client
         print("[OK] Spotify client initialized and verified")
         return _sp_client
     except Exception as e:
-        print(f"[WARN] Spotify Auth failed: {e}")
-        _sp_client = None
+        print(f"[ERROR] Spotify Auth failed: {type(e).__name__}: {e}")
         return None
 
 def _spotify_meta(url: str):
