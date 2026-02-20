@@ -1,25 +1,38 @@
 import os
-import yt_dlp
-import spotipy
-from spotipy.oauth2 import SpotifyClientCredentials
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Spotify Setup (Optional — works without credentials but metadata won't load)
+# ── Optional imports (fail gracefully so the worker always boots) ────
+try:
+    import yt_dlp
+except ImportError:
+    yt_dlp = None
+    print("[WARN] yt-dlp not available")
+
+try:
+    import spotipy
+    from spotipy.oauth2 import SpotifyClientCredentials
+except ImportError:
+    spotipy = None
+    print("[WARN] spotipy not available")
+
+# Spotify Setup (Optional — works without credentials)
 SPOTIPY_CLIENT_ID = os.getenv("SPOTIPY_CLIENT_ID")
 SPOTIPY_CLIENT_SECRET = os.getenv("SPOTIPY_CLIENT_SECRET")
 
 sp = None
-if SPOTIPY_CLIENT_ID and SPOTIPY_CLIENT_SECRET:
+if spotipy and SPOTIPY_CLIENT_ID and SPOTIPY_CLIENT_SECRET:
     try:
         auth_manager = SpotifyClientCredentials(
             client_id=SPOTIPY_CLIENT_ID,
             client_secret=SPOTIPY_CLIENT_SECRET,
         )
         sp = spotipy.Spotify(auth_manager=auth_manager)
+        print("[OK] Spotify client initialized")
     except Exception as e:
         print(f"[WARN] Spotify Auth failed: {e}")
+
 
 
 def get_metadata(url: str):
@@ -42,6 +55,8 @@ def get_metadata(url: str):
             print(f"[WARN] Spotipy metadata failed: {e}")
 
     # yt-dlp fallback
+    if not yt_dlp:
+        return None
     try:
         with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True}) as ydl:
             info = ydl.extract_info(url, download=False)
