@@ -17,25 +17,47 @@ except ImportError:
     spotipy = None
     print("[WARN] spotipy not available")
 
-# Spotify Setup (Optional — works without credentials)
-SPOTIPY_CLIENT_ID = os.getenv("SPOTIPY_CLIENT_ID")
-SPOTIPY_CLIENT_SECRET = os.getenv("SPOTIPY_CLIENT_SECRET")
+# ── Lazy Spotify client (re-reads env vars on first call) ────────────
+_sp_client = None
+_sp_initialized = False
 
-sp = None
-if spotipy and SPOTIPY_CLIENT_ID and SPOTIPY_CLIENT_SECRET:
+
+def _get_spotify_client():
+    """Lazily initialize the Spotify client on first use."""
+    global _sp_client, _sp_initialized
+    if _sp_initialized:
+        return _sp_client
+    _sp_initialized = True
+
+    if not spotipy:
+        print("[WARN] spotipy library not installed")
+        return None
+
+    client_id = os.environ.get("SPOTIPY_CLIENT_ID", "").strip()
+    client_secret = os.environ.get("SPOTIPY_CLIENT_SECRET", "").strip()
+
+    if not client_id or not client_secret:
+        print(f"[WARN] Spotify credentials missing. ID={'set' if client_id else 'EMPTY'}, Secret={'set' if client_secret else 'EMPTY'}")
+        return None
+
     try:
         auth_manager = SpotifyClientCredentials(
-            client_id=SPOTIPY_CLIENT_ID,
-            client_secret=SPOTIPY_CLIENT_SECRET,
+            client_id=client_id,
+            client_secret=client_secret,
         )
-        sp = spotipy.Spotify(auth_manager=auth_manager)
-        print("[OK] Spotify client initialized")
+        _sp_client = spotipy.Spotify(auth_manager=auth_manager)
+        # Quick test to verify credentials work
+        _sp_client.search(q="test", limit=1)
+        print("[OK] Spotify client initialized and verified")
+        return _sp_client
     except Exception as e:
         print(f"[WARN] Spotify Auth failed: {e}")
-
+        _sp_client = None
+        return None
 
 def _spotify_meta(url: str):
     """Extract metadata from a Spotify track URL via the API."""
+    sp = _get_spotify_client()
     if not sp or "open.spotify.com/track/" not in url:
         return None
     try:
@@ -83,7 +105,7 @@ def get_metadata(url: str):
 
     # If it's a Spotify URL but we have no credentials, return a helpful error
     if "open.spotify.com" in url:
-        if not sp:
+        if not _get_spotify_client():
             return {"title": "Spotify credentials required", "artist": "Add SPOTIPY_CLIENT_ID and SPOTIPY_CLIENT_SECRET in Railway Variables", "thumbnail": None, "duration": 0}
         return None
 

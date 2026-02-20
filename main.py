@@ -44,6 +44,19 @@ async def metadata(url: str = Query(...)):
     return JSONResponse({"error": "Track not found"}, status_code=404)
 
 
+@app.get("/health")
+async def health():
+    """Debug endpoint to check if credentials are loaded."""
+    sp = downloader._get_spotify_client()
+    return {
+        "status": "ok",
+        "spotify_connected": sp is not None,
+        "yt_dlp_available": downloader.yt_dlp is not None,
+        "client_id_set": bool(os.environ.get("SPOTIPY_CLIENT_ID", "").strip()),
+        "client_secret_set": bool(os.environ.get("SPOTIPY_CLIENT_SECRET", "").strip()),
+    }
+
+
 @app.get("/download")
 async def download(url: str = Query(...), quality: str = "mp3"):
     async def stream():
