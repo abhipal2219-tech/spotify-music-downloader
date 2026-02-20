@@ -1,17 +1,17 @@
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
-backend/.env
+*.egg-info/
+.env
 venv/
 env/
+
+# Downloads
+/tmp/downloads/
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Downloads
-downloads/
-
-# Artifacts
+# Misc
 *.zip

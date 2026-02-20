@@ -1,15 +1,20 @@
 # Spotify Downloader
 
-A modern single-page web application to download Spotify tracks.
-
-## Deployment on Railway
-
-1. Provide `SPOTIPY_CLIENT_ID` and `SPOTIPY_CLIENT_SECRET` in the environment variables.
-2. The `Procfile` and `package.json` are already set up for Railway.
+A modern web app to download Spotify tracks in MP3 or FLAC.
 
 ## Local Setup
 
-1. Run `pip install -r requirements.txt`.
-2. Run `npm run build` (to copy the frontend to the backend).
-3. Run `python backend/main.py`.
-4. Visit `http://localhost:8000`.
+```bash
+pip install -r requirements.txt
+python main.py
+# Open http://localhost:8080
+```
+
+## Deploy to Railway
+
+1. Push this repo to GitHub.
+2. Create a new Railway project linked to the repo.
+3. Add environment variables in the Railway dashboard:
+   - `SPOTIPY_CLIENT_ID`
+   - `SPOTIPY_CLIENT_SECRET`
+4. Railway auto-deploys using the `Procfile`.
