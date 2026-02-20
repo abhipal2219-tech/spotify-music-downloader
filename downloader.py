@@ -81,7 +81,13 @@ def get_metadata(url: str):
     if meta:
         return meta
 
-    # For non-Spotify URLs, try yt-dlp directly
+    # If it's a Spotify URL but we have no credentials, return a helpful error
+    if "open.spotify.com" in url:
+        if not sp:
+            return {"title": "Spotify credentials required", "artist": "Add SPOTIPY_CLIENT_ID and SPOTIPY_CLIENT_SECRET in Railway Variables", "thumbnail": None, "duration": 0}
+        return None
+
+    # For non-Spotify URLs (e.g. YouTube), try yt-dlp directly
     if not yt_dlp:
         return None
     try:
@@ -125,16 +131,15 @@ def download_track(url: str, quality: str = "mp3", progress_callback=None):
     download_url = url
     if "open.spotify.com" in url:
         meta = _spotify_meta(url)
-        if meta:
-            search_query = f"{meta['artist']} - {meta['title']} audio"
-        else:
-            search_query = url  # fallback — let yt-dlp try searching
+        if not meta:
+            raise RuntimeError("Spotify credentials required. Add SPOTIPY_CLIENT_ID and SPOTIPY_CLIENT_SECRET in Railway Variables.")
+        search_query = f"{meta['artist']} - {meta['title']} audio"
         yt_url = _youtube_search_url(search_query)
         if yt_url:
             download_url = yt_url
             print(f"[OK] Resolved Spotify → YouTube: {yt_url}")
         else:
-            raise RuntimeError("Could not find track on YouTube")
+            raise RuntimeError(f"Could not find '{meta['title']}' on YouTube")
 
     output_dir = "/tmp/downloads"
     os.makedirs(output_dir, exist_ok=True)
