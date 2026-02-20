@@ -34,27 +34,54 @@ if spotipy and SPOTIPY_CLIENT_ID and SPOTIPY_CLIENT_SECRET:
         print(f"[WARN] Spotify Auth failed: {e}")
 
 
+def _spotify_meta(url: str):
+    """Extract metadata from a Spotify track URL via the API."""
+    if not sp or "open.spotify.com/track/" not in url:
+        return None
+    try:
+        track_id = url.split("track/")[1].split("?")[0]
+        track = sp.track(track_id)
+        return {
+            "title": track["name"],
+            "artist": track["artists"][0]["name"],
+            "thumbnail": (
+                track["album"]["images"][0]["url"]
+                if track["album"]["images"]
+                else None
+            ),
+            "duration": track["duration_ms"] // 1000,
+        }
+    except Exception as e:
+        print(f"[WARN] Spotipy metadata failed: {e}")
+        return None
+
+
+def _youtube_search_url(query: str) -> str | None:
+    """Search YouTube and return the URL of the first result."""
+    if not yt_dlp:
+        return None
+    try:
+        with yt_dlp.YoutubeDL(
+            {"quiet": True, "no_warnings": True, "extract_flat": True, "default_search": "ytsearch1"}
+        ) as ydl:
+            info = ydl.extract_info(query, download=False)
+            if info and "entries" in info and info["entries"]:
+                return info["entries"][0].get("url") or info["entries"][0].get("webpage_url")
+            elif info and info.get("webpage_url"):
+                return info["webpage_url"]
+    except Exception as e:
+        print(f"[WARN] YouTube search failed: {e}")
+    return None
+
 
 def get_metadata(url: str):
-    """Fetch track metadata via Spotipy, falling back to yt-dlp."""
-    if sp and "open.spotify.com/track/" in url:
-        try:
-            track_id = url.split("track/")[1].split("?")[0]
-            track = sp.track(track_id)
-            return {
-                "title": track["name"],
-                "artist": track["artists"][0]["name"],
-                "thumbnail": (
-                    track["album"]["images"][0]["url"]
-                    if track["album"]["images"]
-                    else None
-                ),
-                "duration": track["duration_ms"] // 1000,
-            }
-        except Exception as e:
-            print(f"[WARN] Spotipy metadata failed: {e}")
+    """Fetch track metadata. Spotify URLs use the API; others use yt-dlp."""
+    # Try Spotify API first
+    meta = _spotify_meta(url)
+    if meta:
+        return meta
 
-    # yt-dlp fallback
+    # For non-Spotify URLs, try yt-dlp directly
     if not yt_dlp:
         return None
     try:
@@ -90,7 +117,25 @@ class ProgressHook:
 
 
 def download_track(url: str, quality: str = "mp3", progress_callback=None):
-    """Download track audio using yt-dlp."""
+    """Download track audio. Spotify URLs are resolved to YouTube first."""
+    if not yt_dlp:
+        raise RuntimeError("yt-dlp is not available")
+
+    # If it's a Spotify URL, find the track on YouTube instead
+    download_url = url
+    if "open.spotify.com" in url:
+        meta = _spotify_meta(url)
+        if meta:
+            search_query = f"{meta['artist']} - {meta['title']} audio"
+        else:
+            search_query = url  # fallback — let yt-dlp try searching
+        yt_url = _youtube_search_url(search_query)
+        if yt_url:
+            download_url = yt_url
+            print(f"[OK] Resolved Spotify → YouTube: {yt_url}")
+        else:
+            raise RuntimeError("Could not find track on YouTube")
+
     output_dir = "/tmp/downloads"
     os.makedirs(output_dir, exist_ok=True)
 
@@ -110,4 +155,4 @@ def download_track(url: str, quality: str = "mp3", progress_callback=None):
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url])
+        ydl.download([download_url])
