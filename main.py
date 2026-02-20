@@ -48,12 +48,28 @@ async def metadata(url: str = Query(...)):
 async def health():
     """Debug endpoint to check if credentials are loaded."""
     sp = downloader._get_spotify_client()
+    error_msg = None
+    if not sp:
+        # Try to get the exact error
+        try:
+            cid = os.environ.get("SPOTIPY_CLIENT_ID", "").strip()
+            csec = os.environ.get("SPOTIPY_CLIENT_SECRET", "").strip()
+            if cid and csec and downloader.spotipy:
+                from spotipy.oauth2 import SpotifyClientCredentials
+                am = SpotifyClientCredentials(client_id=cid, client_secret=csec)
+                test_sp = downloader.spotipy.Spotify(auth_manager=am)
+                test_sp.search(q="test", limit=1)
+            else:
+                error_msg = f"spotipy={'installed' if downloader.spotipy else 'MISSING'}, id_len={len(cid)}, secret_len={len(csec)}"
+        except Exception as e:
+            error_msg = f"{type(e).__name__}: {e}"
     return {
         "status": "ok",
         "spotify_connected": sp is not None,
         "yt_dlp_available": downloader.yt_dlp is not None,
         "client_id_set": bool(os.environ.get("SPOTIPY_CLIENT_ID", "").strip()),
         "client_secret_set": bool(os.environ.get("SPOTIPY_CLIENT_SECRET", "").strip()),
+        "auth_error": error_msg,
     }
 
 
