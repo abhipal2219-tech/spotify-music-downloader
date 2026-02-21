@@ -10,6 +10,13 @@ except ImportError:
     yt_dlp = None
     print("[WARN] yt-dlp not available")
 
+try:
+    import static_ffmpeg
+    static_ffmpeg.add_paths()
+except ImportError:
+    static_ffmpeg = None
+    print("[WARN] static_ffmpeg not available")
+
 import urllib.request
 import urllib.parse
 import json
