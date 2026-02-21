@@ -3,38 +3,124 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotify Downloader</title>
-    <meta name="description" content="Download your favorite Spotify tracks in MP3 or FLAC quality.">
+    <title>Retro Music Downloader</title>
+    <meta name="description" content="Download your favorite tracks with retro style.">
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Retro Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Chakra+Petch:wght@500;700&display=swap" rel="stylesheet">
+    
     <script>
         tailwind.config = {
             theme: {
                 extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    fontFamily: { 
+                        display: ['Space Grotesk', 'sans-serif'],
+                        mono: ['Chakra Petch', 'monospace']
+                    },
                     colors: {
-                        spotify: { green: '#1DB954', dark: '#121212', card: '#181818', hover: '#282828', light: '#b3b3b3' }
+                        retro: { 
+                            bg: '#9fa688',      // Sage/Olive Green from the image
+                            card: '#8c9576',    // Slightly darker for contrast
+                            text: '#111111',    // Stark black
+                            accent: '#FF5E00',  // Bright orange action
+                            accentHover: '#E65500' 
+                        }
+                    },
+                    boxShadow: {
+                        'brutal': '4px 4px 0px #111111',
+                        'brutal-sm': '2px 2px 0px #111111',
+                        'brutal-inset': 'inset 4px 4px 0px rgba(17,17,17,0.1)'
                     }
                 }
             }
         }
     </script>
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .glass { background: rgba(255,255,255,0.04); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.08); }
-        @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
-        .shimmer { background: linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.06) 50%, transparent 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
-        @keyframes fadeUp { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }
-        .fade-up { animation: fadeUp .4s ease-out forwards; }
-        @keyframes pulse-bar { 0%,100%{opacity:1} 50%{opacity:.7} }
-        .pulse-bar { animation: pulse-bar 2s ease-in-out infinite; }
+        body { 
+            background-color: #9fa688; 
+            color: #111111;
+            /* subtle noise overlay for retro feel */
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E");
+        }
+        
+        /* Brutalist Button Physics */
+        .btn-brutal {
+            border: 2px solid #111111;
+            box-shadow: 4px 4px 0px #111111;
+            transition: all 0.1s ease;
+        }
+        .btn-brutal:hover:not(:disabled) {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px #111111;
+        }
+        .btn-brutal:active:not(:disabled) {
+            transform: translate(4px, 4px);
+            box-shadow: 0px 0px 0px #111111;
+        }
+        
+        /* Retro Input */
+        .input-brutal {
+            border: 2px solid #111111;
+            background: #e4e6dc;
+            box-shadow: inset 4px 4px 0px rgba(17, 17, 17, 0.05);
+        }
+        .input-brutal:focus {
+            outline: none;
+            background: #f0f2ea;
+        }
+
+        /* Loading Bar Striping */
+        .stripes {
+            background-image: repeating-linear-gradient(
+                45deg,
+                transparent,
+                transparent 10px,
+                rgba(17,17,17,0.2) 10px,
+                rgba(17,17,17,0.2) 20px
+            );
+            background-size: 28px 28px;
+            animation: moveStripes 1s linear infinite;
+        }
+        @keyframes moveStripes {
+            0% { background-position: 0 0; }
+            100% { background-position: 28px 0; }
+        }
+        
+        /* Technical lines */
+        .tech-line {
+            height: 2px;
+            background-color: #111111;
+            flex-grow: 1;
+        }
     </style>
 </head>
-<body class="bg-spotify-dark text-white min-h-screen flex flex-col items-center justify-center p-4 selection:bg-spotify-green/30">
-    <div id="root" class="w-full max-w-xl"></div>
+<body class="min-h-screen flex flex-col font-display selection:bg-retro-accent selection:text-white">
+    <!-- Top HUD Bar -->
+    <div class="w-full flex justify-between items-center p-4 text-xs font-mono font-bold tracking-widest uppercase border-b-2 border-retro-text sticky top-0 bg-transparent z-10 hidden sm:flex">
+        <div>MUSIC PLAYER HF-S 800</div>
+        <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-retro-text"></span> RECORD START</div>
+            <div class="w-24 h-0.5 bg-retro-text"></div>
+        </div>
+        <div>TYPE 1 NORMAL POSITION</div>
+    </div>
+
+    <div id="root" class="w-full max-w-2xl mx-auto flex-grow flex flex-col justify-center p-4 sm:p-6 lg:p-8"></div>
+
+    <!-- Bottom HUD Bar -->
+    <div class="w-full flex justify-between items-end p-4 text-[10px] sm:text-xs font-mono font-bold tracking-widest uppercase border-t-2 border-retro-text mt-auto">
+        <div>
+            <div>XX1 NDFR - 00 NMB 00001 <span class="ml-4">2026</span></div>
+            <div>IDENTIFICATION NUMBER - 06746HDFGFS634523</div>
+        </div>
+        <div class="text-right hidden sm:block">000000003214</div>
+    </div>
 
     <script type="text/babel">
         const { useState, useCallback } = React;
@@ -57,105 +143,158 @@
                 try {
                     const r = await fetch(`${API}/metadata?url=${encodeURIComponent(url)}`);
                     if (r.ok) { setMeta(await r.json()); }
-                    else { setError('Could not fetch metadata. Check the URL or add Spotify credentials.'); }
-                } catch { setError('Server unreachable.'); }
+                    else { setError('COULD NOT FETCH DATA. VERIFY URL OR CREDENTIALS.'); }
+                } catch { setError('SERVER OFFLINE.'); }
                 finally { setFetching(false); }
             }, [url]);
 
             const startDownload = () => {
-                setDownloading(true); setProgress(0); setStatus('Connecting…'); setError('');
+                setDownloading(true); setProgress(0); setStatus('ESTABLISHING CONNECTION...'); setError('');
                 const es = new EventSource(`${API}/download?url=${encodeURIComponent(url)}&quality=${quality}`);
                 es.onmessage = (e) => {
                     const d = JSON.parse(e.data);
-                    if (d.status === 'downloading') { setProgress(d.progress); setStatus(`Downloading ${d.progress.toFixed(1)}%`); }
-                    else if (d.status === 'finished') { setProgress(100); setStatus('Converting audio…'); }
-                    else if (d.status === 'complete') { setStatus('Done! ✓'); setDownloading(false); es.close(); }
+                    if (d.status === 'downloading') { setProgress(d.progress); setStatus(`DOWNLOADING DATA [${d.progress.toFixed(1)}%]`); }
+                    else if (d.status === 'finished') { setProgress(100); setStatus('PROCESSING AUDIO MATRIX...'); }
+                    else if (d.status === 'complete') { setStatus('TRANSMISSION COMPLETE.'); setDownloading(false); es.close(); }
                 };
-                es.onerror = () => { setError('Download failed.'); setDownloading(false); es.close(); };
+                es.onerror = () => { setError('TRANSMISSION FAILED.'); setDownloading(false); es.close(); };
             };
 
             return (
-                <div className="space-y-6 fade-up">
-                    {/* Header */}
-                    <div className="text-center mb-2">
-                        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
-                            <span className="text-white">Spotify </span>
-                            <span className="text-spotify-green">Downloader</span>
-                        </h1>
-                        <p className="text-spotify-light text-sm mt-1">Paste a Spotify or YouTube URL to get started</p>
+                <div className="space-y-8 w-full relative">
+                    {/* Giant background text (optional flair from the image) */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10rem] font-bold text-retro-text opacity-5 select-none pointer-events-none whitespace-nowrap z-[-1]">
+                        ASH TR
                     </div>
 
-                    {/* Card */}
-                    <div className="glass rounded-2xl p-6 space-y-5">
-                        {/* URL input */}
-                        <div className="relative">
-                            <input
-                                id="url-input"
-                                type="text"
-                                placeholder="https://open.spotify.com/track/..."
-                                className="w-full bg-spotify-card rounded-xl py-3.5 px-5 pr-12 text-sm outline-none focus:ring-2 focus:ring-spotify-green/60 transition placeholder:text-spotify-light/50"
-                                value={url}
-                                onChange={e => setUrl(e.target.value)}
-                                onBlur={fetchMeta}
-                                onKeyDown={e => e.key === 'Enter' && fetchMeta()}
-                            />
-                            {fetching && (
-                                <div className="absolute right-4 top-3.5">
-                                    <div className="w-5 h-5 border-2 border-spotify-green border-t-transparent rounded-full animate-spin" />
+                    {/* Main Title Block */}
+                    <div className="flex flex-col items-center text-center">
+                        <div className="flex items-center gap-4 w-full justify-center mb-2">
+                            <svg className="w-8 h-8 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/><circle cx="12" cy="12" r="1.5"/></svg>
+                            <h1 className="text-4xl sm:text-5xl md:text-6xl font-black uppercase tracking-tighter">
+                                SOUNDEX
+                            </h1>
+                            <svg className="w-8 h-8 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z"/><circle cx="12" cy="12" r="1.5"/></svg>
+                        </div>
+                        <div className="font-mono text-xs font-bold tracking-widest uppercase border-t-2 border-b-2 border-retro-text py-1 px-8 inline-block">
+                            AUDIO EXTRACTION UTILITY
+                        </div>
+                    </div>
+
+                    {/* Central Brutalist Card */}
+                    <div className="bg-retro-card border-4 border-retro-text p-6 sm:p-8 relative z-0">
+                        {/* Screws/Details */}
+                        <div className="absolute top-2 left-2 w-3 h-3 border-2 border-retro-text rounded-full flex items-center justify-center"><div className="w-full h-0.5 bg-retro-text rotate-45"></div></div>
+                        <div className="absolute top-2 right-2 w-3 h-3 border-2 border-retro-text rounded-full flex items-center justify-center"><div className="w-full h-0.5 bg-retro-text -rotate-45"></div></div>
+                        <div className="absolute bottom-2 left-2 w-3 h-3 border-2 border-retro-text rounded-full flex items-center justify-center"><div className="w-full h-0.5 bg-retro-text -rotate-45"></div></div>
+                        <div className="absolute bottom-2 right-2 w-3 h-3 border-2 border-retro-text rounded-full flex items-center justify-center"><div className="w-full h-0.5 bg-retro-text rotate-45"></div></div>
+
+                        <div className="space-y-6 mt-4 relative z-10">
+                            {/* Input Area */}
+                            <div>
+                                <label className="block font-mono text-xs font-bold mb-2 uppercase">Target Coordinates (URL)</label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        placeholder="https://open.spotify.com/track/..."
+                                        className="w-full input-brutal p-4 font-mono text-sm placeholder:text-retro-text/40"
+                                        value={url}
+                                        onChange={e => setUrl(e.target.value)}
+                                        onBlur={fetchMeta}
+                                        onKeyDown={e => e.key === 'Enter' && fetchMeta()}
+                                    />
+                                    {fetching && (
+                                        <div className="absolute right-4 top-4 font-mono text-xs font-bold animate-pulse">
+                                            SCANNING...
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Controls Area */}
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <div className="flex-1">
+                                    <label className="block font-mono text-xs font-bold mb-2 uppercase">Output Format</label>
+                                    <div className="relative">
+                                        <select
+                                            className="w-full input-brutal p-4 font-mono text-sm appearance-none cursor-pointer rounded-none"
+                                            value={quality}
+                                            onChange={e => setQuality(e.target.value)}
+                                        >
+                                            <option value="mp3">MP3 / STANDARD / 192K</option>
+                                            <option value="flac">FLAC / LOSSLESS / HI-FI</option>
+                                        </select>
+                                        <div className="absolute right-4 top-4 pointer-events-none">▼</div>
+                                    </div>
+                                </div>
+                                <div className="flex-[1.5] flex items-end">
+                                    <button
+                                        onClick={startDownload}
+                                        disabled={!url.trim() || downloading}
+                                        className="w-full bg-retro-accent text-white font-display font-bold text-xl uppercase p-4 btn-brutal disabled:bg-gray-400 disabled:text-gray-200 disabled:border-gray-500 disabled:shadow-none disabled:transform-none cursor-pointer"
+                                    >
+                                        {downloading ? 'Engaged' : '----EXTRACT----'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Metadata Display */}
+                            {meta && (
+                                <div className="border-2 border-retro-text p-4 bg-[#e4e6dc] flex items-center gap-4 mt-8">
+                                    {meta.thumbnail ? (
+                                        <img src={meta.thumbnail} className="w-20 h-20 border-2 border-retro-text object-cover filter contrast-125 saturate-50" alt="Cover" />
+                                    ) : (
+                                        <div className="w-20 h-20 border-2 border-retro-text flex items-center justify-center font-mono text-[10px] text-center p-1">NO IMAGE</div>
+                                    )}
+                                    <div className="min-w-0 font-mono flex-grow">
+                                        <div className="flex justify-between border-b-2 border-retro-text border-dotted pb-1 mb-1">
+                                            <span className="text-[10px] font-bold">TITLE:</span>
+                                            <span className="text-xs font-bold truncate ml-2">{meta.title}</span>
+                                        </div>
+                                        <div className="flex justify-between border-b-2 border-retro-text border-dotted pb-1 mb-1">
+                                            <span className="text-[10px] font-bold">ARTIST:</span>
+                                            <span className="text-xs truncate ml-2">{meta.artist}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-[10px] font-bold">DUR:</span>
+                                            <span className="text-xs ml-2">{Math.floor(meta.duration/60)}:{meta.duration%60 < 10 ? '0' : ''}{meta.duration%60}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Progress Bar */}
+                            {(downloading || progress > 0) && (
+                                <div className="mt-6 border-2 border-retro-text p-2 bg-[#e4e6dc]">
+                                    <div className="flex justify-between font-mono text-[10px] font-bold mb-1 uppercase">
+                                        <span>STATUS: {status}</span>
+                                        <span>{Math.floor(progress)}%</span>
+                                    </div>
+                                    <div className="w-full h-6 border-2 border-retro-text bg-white relative overflow-hidden">
+                                        {/* Solid black fill */}
+                                        <div 
+                                            className="h-full bg-retro-text absolute top-0 left-0 transition-all duration-300"
+                                            style={{ width: `${progress}%` }}
+                                        />
+                                        {/* Stripes overlay while active */}
+                                        {downloading && (
+                                            <div 
+                                                className="h-full stripes absolute top-0 left-0 transition-all duration-300 pointer-events-none mix-blend-difference opacity-50"
+                                                style={{ width: `${progress}%` }}
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Error Display */}
+                            {error && (
+                                <div className="mt-4 border-2 border-retro-text p-3 bg-retro-text text-white font-mono text-xs font-bold text-center uppercase">
+                                    ! ERROR: {error} !
                                 </div>
                             )}
                         </div>
-
-                        {/* Quality + Download */}
-                        <div className="flex gap-3">
-                            <select
-                                id="quality-select"
-                                className="flex-1 bg-spotify-card rounded-xl py-3.5 px-4 text-sm outline-none focus:ring-2 focus:ring-spotify-green/60 appearance-none cursor-pointer"
-                                value={quality}
-                                onChange={e => setQuality(e.target.value)}
-                            >
-                                <option value="mp3">MP3 · 192 kbps</option>
-                                <option value="flac">FLAC · Lossless</option>
-                            </select>
-                            <button
-                                id="download-btn"
-                                onClick={startDownload}
-                                disabled={!url.trim() || downloading}
-                                className="flex-[2] bg-spotify-green hover:brightness-110 active:scale-[.97] disabled:opacity-40 disabled:cursor-not-allowed text-black font-semibold py-3.5 px-6 rounded-xl transition-all text-sm"
-                            >
-                                {downloading ? 'Downloading…' : 'Download'}
-                            </button>
-                        </div>
-
-                        {/* Metadata */}
-                        {meta && (
-                            <div className="flex items-center gap-4 p-3 bg-spotify-card rounded-xl fade-up">
-                                {meta.thumbnail && <img src={meta.thumbnail} className="w-16 h-16 rounded-lg object-cover shadow" alt="Cover" />}
-                                <div className="min-w-0">
-                                    <p className="font-semibold text-sm truncate">{meta.title}</p>
-                                    <p className="text-spotify-light text-xs truncate">{meta.artist}</p>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Progress */}
-                        {(downloading || progress > 0) && (
-                            <div className="space-y-2 fade-up">
-                                <div className="w-full bg-spotify-card rounded-full h-2 overflow-hidden">
-                                    <div
-                                        className={`h-full rounded-full transition-all duration-300 ${downloading ? 'pulse-bar' : ''}`}
-                                        style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #1DB954, #1ed760)' }}
-                                    />
-                                </div>
-                                <p className="text-center text-xs font-medium text-spotify-green">{status}</p>
-                            </div>
-                        )}
-
-                        {/* Error */}
-                        {error && <p className="text-red-400 text-xs text-center fade-up">{error}</p>}
                     </div>
-
-                    <p className="text-center text-[10px] text-spotify-light/40">For personal use only</p>
                 </div>
             );
         }
