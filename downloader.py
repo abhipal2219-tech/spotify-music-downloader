@@ -50,13 +50,19 @@ def _youtube_search_url(query: str) -> str | None:
         return None
     try:
         with yt_dlp.YoutubeDL(
-            {"quiet": True, "no_warnings": True, "extract_flat": True, "default_search": "ytsearch1"}
+            {"quiet": True, "no_warnings": True, "extract_flat": True}
         ) as ydl:
-            info = ydl.extract_info(query, download=False)
+            # yt-dlp requires 'ytsearch1:' prefix to actually search when using extract_info
+            search_query = f"ytsearch1:{query}"
+            info = ydl.extract_info(search_query, download=False)
+            
             if info and "entries" in info and info["entries"]:
-                return info["entries"][0].get("url") or info["entries"][0].get("webpage_url")
-            elif info and info.get("webpage_url"):
-                return info["webpage_url"]
+                entry = info["entries"][0]
+                # extract_flat sometimes returns just the 'id' or 'url'
+                if "url" in entry:
+                    return entry["url"]
+                elif "id" in entry:
+                    return f"https://www.youtube.com/watch?v={entry['id']}"
     except Exception as e:
         print(f"[WARN] YouTube search failed: {e}")
     return None
@@ -118,8 +124,8 @@ def download_track(url: str, quality: str = "mp3", progress_callback=None):
     if "open.spotify.com" in url:
         meta = _spotify_meta(url)
         if not meta:
-            raise RuntimeError("Could not fetch Spotify track info. Ensure the URL is public and valid.")
-        search_query = f"{meta['artist']} - {meta['title']} audio"
+            raise RuntimeError("Could not fetch Spotify metadata.")
+        search_query = f"{meta['title']} audio"
         yt_url = _youtube_search_url(search_query)
         if yt_url:
             download_url = yt_url
