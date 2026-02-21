@@ -317,7 +317,19 @@
                     const d = JSON.parse(e.data);
                     if (d.status === 'downloading') { setProgress(d.progress); setStatus(`DOWNLOADING DATA [${d.progress.toFixed(1)}%]`); }
                     else if (d.status === 'finished') { setProgress(100); setStatus('PROCESSING AUDIO MATRIX...'); }
-                    else if (d.status === 'complete') { setStatus('TRANSMISSION COMPLETE.'); setDownloading(false); es.close(); }
+                    else if (d.status === 'complete') {
+                        setStatus('TRANSMISSION COMPLETE.');
+                        setDownloading(false);
+                        es.close();
+                        if (d.filename) {
+                            const a = document.createElement('a');
+                            a.href = `${API}/file?filename=${encodeURIComponent(d.filename)}`;
+                            a.download = d.filename; // Encourage browser download
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                        }
+                    }
                 };
                 es.onerror = () => { setError('TRANSMISSION FAILED.'); setDownloading(false); es.close(); };
             };

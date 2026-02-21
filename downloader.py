@@ -159,4 +159,13 @@ def download_track(url: str, quality: str = "mp3", progress_callback=None):
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([download_url])
+        info_dict = ydl.extract_info(download_url, download=True)
+        
+        # Determine the final filename after FFmpeg post-processing
+        if hasattr(ydl, 'prepare_filename') and info_dict:
+            base_filename = ydl.prepare_filename(info_dict)
+            base, _ = os.path.splitext(base_filename)
+            final_filename = f"{base}.{quality}"
+            return os.path.basename(final_filename)
+            
+    return None

@@ -74,9 +74,26 @@ async def download(url: str = Query(...), quality: str = "mp3"):
             except asyncio.TimeoutError:
                 continue
 
-        yield 'data: {"status": "complete"}\n\n'
+        result = task.result()
+        if result:
+            yield f'data: {{"status": "complete", "filename": "{result}"}}\n\n'
+        else:
+            yield 'data: {"status": "error", "message": "Failed to extract filename"}\n\n'
 
     return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+@app.get("/file")
+async def serve_file(filename: str = Query(...)):
+    # Validate filename to prevent path traversal
+    if os.path.basename(filename) != filename:
+        return JSONResponse({"error": "Invalid filename"}, status_code=400)
+        
+    file_path = os.path.join("/tmp/downloads", filename)
+    if not os.path.exists(file_path):
+        return JSONResponse({"error": "File not found"}, status_code=404)
+        
+    return FileResponse(file_path, filename=filename)
 
 
 # ── Local dev entry point ────────────────────────────────────────────
