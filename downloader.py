@@ -11,46 +11,36 @@ except ImportError:
     print("[WARN] yt-dlp not available")
 
 import urllib.request
-import re
-import html
+import urllib.parse
+import json
 
 def _spotify_meta(url: str):
-    """Extract metadata from a public Spotify track URL via OpenGraph HTML tags (Zero Config)."""
+    """Extract metadata from a public Spotify track using their public oEmbed API (Zero Config)."""
     if "open.spotify.com/track/" not in url:
         return None
     try:
-        # Fetch the public HTML of the Spotify track page
+        # The public oEmbed API doesn't require any auth/client_id
+        oembed_url = f"https://open.spotify.com/oembed?url={urllib.parse.quote(url)}"
         req = urllib.request.Request(
-            url, 
-            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+            oembed_url, 
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         )
         with urllib.request.urlopen(req, timeout=10) as response:
-            html_content = response.read().decode('utf-8')
-        
-        # Regex to find <meta property="og:title" content="...">
-        title_match = re.search(r'<meta property="og:title" content="([^"]+)"', html_content)
-        desc_match = re.search(r'<meta property="og:description" content="([^"]+)"', html_content)
-        image_match = re.search(r'<meta property="og:image" content="([^"]+)"', html_content)
-        
-        if not title_match or not desc_match:
-            print("[WARN] Could not find OpenGraph tags in Spotify HTML")
-            return None
+            data = json.loads(response.read().decode('utf-8'))
             
-        title = html.unescape(title_match.group(1))
-        desc = html.unescape(desc_match.group(1))
-        image = html.unescape(image_match.group(1)) if image_match else None
+        title = data.get("title", "Unknown Track")
         
-        # The description is usually formatted like "ArtistName · Song · 2023"
-        artist = desc.split(" · ")[0] if " · " in desc else "Unknown Artist"
+        # oEmbed doesn't separate artist, title typically looks like "SongName - song and lyrics by ArtistName"
+        # Since we just need it for a YouTube search, returning the full title is sufficient
         
         return {
             "title": title,
-            "artist": artist,
-            "thumbnail": image,
-            "duration": 0, # Duration isn't reliably in the OG tags, but yt-dlp doesn't strictly need it to search
+            "artist": "Spotify Track", # Fallback, not strictly needed since title has it all
+            "thumbnail": data.get("thumbnail_url"),
+            "duration": 0,
         }
     except Exception as e:
-        print(f"[WARN] Zero-config Spotipy metadata failed: {type(e).__name__}: {e}")
+        print(f"[WARN] Spotify oEmbed metadata failed: {type(e).__name__}: {e}")
         return None
 
 
