@@ -1,6 +1,5 @@
 fastapi
 uvicorn[standard]
 gunicorn
-spotipy
 yt-dlp
 python-dotenv

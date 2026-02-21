@@ -10,71 +10,47 @@ except ImportError:
     yt_dlp = None
     print("[WARN] yt-dlp not available")
 
-try:
-    import spotipy
-    from spotipy.oauth2 import SpotifyClientCredentials
-except ImportError:
-    spotipy = None
-    print("[WARN] spotipy not available")
-
-# ── Lazy Spotify client (re-reads env vars on first call) ────────────
-_sp_client = None
-
-
-def _get_spotify_client():
-    """Initialize the Spotify client. Retries if not yet connected."""
-    global _sp_client
-    if _sp_client is not None:
-        return _sp_client
-
-    if not spotipy:
-        print("[WARN] spotipy library not installed")
-        return None
-
-    client_id = os.environ.get("SPOTIPY_CLIENT_ID", "").strip()
-    client_secret = os.environ.get("SPOTIPY_CLIENT_SECRET", "").strip()
-
-    print(f"[DEBUG] Attempting Spotify auth. ID length={len(client_id)}, Secret length={len(client_secret)}")
-
-    if not client_id or not client_secret:
-        print("[WARN] Spotify credentials are empty")
-        return None
-
-    try:
-        auth_manager = SpotifyClientCredentials(
-            client_id=client_id,
-            client_secret=client_secret,
-        )
-        client = spotipy.Spotify(auth_manager=auth_manager)
-        # Quick test to verify credentials work
-        client.search(q="test", limit=1)
-        _sp_client = client
-        print("[OK] Spotify client initialized and verified")
-        return _sp_client
-    except Exception as e:
-        print(f"[ERROR] Spotify Auth failed: {type(e).__name__}: {e}")
-        return None
+import urllib.request
+import re
+import html
 
 def _spotify_meta(url: str):
-    """Extract metadata from a Spotify track URL via the API."""
-    sp = _get_spotify_client()
-    if not sp or "open.spotify.com/track/" not in url:
+    """Extract metadata from a public Spotify track URL via OpenGraph HTML tags (Zero Config)."""
+    if "open.spotify.com/track/" not in url:
         return None
     try:
-        track_id = url.split("track/")[1].split("?")[0]
-        track = sp.track(track_id)
+        # Fetch the public HTML of the Spotify track page
+        req = urllib.request.Request(
+            url, 
+            headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'}
+        )
+        with urllib.request.urlopen(req, timeout=10) as response:
+            html_content = response.read().decode('utf-8')
+        
+        # Regex to find <meta property="og:title" content="...">
+        title_match = re.search(r'<meta property="og:title" content="([^"]+)"', html_content)
+        desc_match = re.search(r'<meta property="og:description" content="([^"]+)"', html_content)
+        image_match = re.search(r'<meta property="og:image" content="([^"]+)"', html_content)
+        
+        if not title_match or not desc_match:
+            print("[WARN] Could not find OpenGraph tags in Spotify HTML")
+            return None
+            
+        title = html.unescape(title_match.group(1))
+        desc = html.unescape(desc_match.group(1))
+        image = html.unescape(image_match.group(1)) if image_match else None
+        
+        # The description is usually formatted like "ArtistName · Song · 2023"
+        artist = desc.split(" · ")[0] if " · " in desc else "Unknown Artist"
+        
         return {
-            "title": track["name"],
-            "artist": track["artists"][0]["name"],
-            "thumbnail": (
-                track["album"]["images"][0]["url"]
-                if track["album"]["images"]
-                else None
-            ),
-            "duration": track["duration_ms"] // 1000,
+            "title": title,
+            "artist": artist,
+            "thumbnail": image,
+            "duration": 0, # Duration isn't reliably in the OG tags, but yt-dlp doesn't strictly need it to search
         }
     except Exception as e:
-        print(f"[WARN] Spotipy metadata failed: {e}")
+        print(f"[WARN] Zero-config Spotipy metadata failed: {type(e).__name__}: {e}")
         return None
 
 
@@ -103,10 +79,8 @@ def get_metadata(url: str):
     if meta:
         return meta
 
-    # If it's a Spotify URL but we have no credentials, return a helpful error
+    # If it's a Spotify URL but scraping failed, don't fall back to yt-dlp (it will timeout)
     if "open.spotify.com" in url:
-        if not _get_spotify_client():
-            return {"title": "Spotify credentials required", "artist": "Add SPOTIPY_CLIENT_ID and SPOTIPY_CLIENT_SECRET in Railway Variables", "thumbnail": None, "duration": 0}
         return None
 
     # For non-Spotify URLs (e.g. YouTube), try yt-dlp directly
@@ -154,7 +128,7 @@ def download_track(url: str, quality: str = "mp3", progress_callback=None):
     if "open.spotify.com" in url:
         meta = _spotify_meta(url)
         if not meta:
-            raise RuntimeError("Spotify credentials required. Add SPOTIPY_CLIENT_ID and SPOTIPY_CLIENT_SECRET in Railway Variables.")
+            raise RuntimeError("Could not fetch Spotify track info. Ensure the URL is public and valid.")
         search_query = f"{meta['artist']} - {meta['title']} audio"
         yt_url = _youtube_search_url(search_query)
         if yt_url:
